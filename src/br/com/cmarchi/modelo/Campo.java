@@ -1,10 +1,7 @@
 package br.com.cmarchi.modelo;
 
-import br.com.cmarchi.excecao.ExplosaoException;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.io.*;
 
 public class Campo {
 
@@ -22,11 +19,21 @@ public class Campo {
 
 
     private List<Campo> vizinhos = new ArrayList<>();
+    private List<CampoObservador> observadores = new ArrayList<>();
 
     Campo(int linha, int coluna){
         this.linha = linha;
         this.coluna = coluna;
 
+    }
+
+    public void registrarObservador(CampoObservador observador){
+        observadores.add(observador);
+    }
+
+    private void notificarObservadores(CampoEvento evento){
+        observadores.stream()
+                .forEach(observador -> observador.eventoOcorreu(this, evento));
     }
 
     boolean adicionarVizinho(Campo vizinho) {
@@ -53,6 +60,12 @@ public class Campo {
         if(!aberto) {
             marcado = !marcado;
         }
+
+        if(marcado) {
+            notificarObservadores(CampoEvento.MARCAR);
+        } else{
+            notificarObservadores(CampoEvento.DESMARCAR);
+        }
     }
 
     boolean abrir() {
@@ -60,8 +73,11 @@ public class Campo {
             aberto = true;
 
             if(minado) {
-                throw new ExplosaoException();
+                notificarObservadores(CampoEvento.EXPLODIR);
+                return true;
             }
+
+            setAberto(true);
 
             if(vizinhancaSegura()) {
                 vizinhos.forEach(v -> v.abrir());
@@ -86,6 +102,10 @@ public class Campo {
 
      void setAberto(boolean aberto) {
         this.aberto = aberto;
+
+        if(aberto) {
+            notificarObservadores(CampoEvento.ABRIR);
+        }
     }
 
     boolean isFechado()
@@ -124,25 +144,5 @@ public class Campo {
         minado = false;
         marcado = false;
     }
-    @Override
-    public String toString() {
-        if(marcado) {
-            return "x";
-        } else if (aberto && minado) {
-            return ANSI_YELLOW + "*" + ANSI_RESET;
-        } else if (aberto && minasNaVizinhanca() > 0) {
-            if(minasNaVizinhanca() == 1){
-                return ANSI_CYAN + Long.toString(minasNaVizinhanca()) + ANSI_RESET;
-            } else if(minasNaVizinhanca() == 2){
-                return ANSI_GREEN + Long.toString(minasNaVizinhanca()) + ANSI_RESET;
-            } else {
-                return ANSI_RED + Long.toString(minasNaVizinhanca()) + ANSI_RESET;
-            }
 
-        } else if (aberto) {
-            return " ";
-        } else  {
-            return "?";
-        }
-    }
 }
